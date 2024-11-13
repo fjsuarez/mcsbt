@@ -1,0 +1,60 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+env/
+venv/
+.venv/
+.pipenv/
+.pyenv/
+.venv/
+
+# Python packaging
+*.egg
+*.egg-info/
+dist/
+build/
+*.pyc
+
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints/
+
+# Jupyter Notebook temporary files
+*.nbconvert.ipynb
+
+# Sensitive data files
+*.env
+.env.*
+
+# Logs and data
+*.log
+*.csv
+*.dat
+*.pkl
+*.sqlite3
+*.db
+*.db-journal
+
+# System files
+.DS_Store
+Thumbs.db
+
+# VS Code
+.vscode/
+
+# IDEs
+.idea/
+
+# Test and coverage
+htmlcov/
+.tox/
+.nox/
+.coverage
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+.pytest_cache/
+tests/__pycache__/
