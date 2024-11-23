@@ -1,7 +1,6 @@
 import socket
 import threading
 import signal
-import sys
 
 class ChatClient(threading.Thread):
     def __init__(self, conn, address, server):
@@ -65,6 +64,11 @@ class ChatServer:
         self.server.listen(5)
         self.running = True
         self.clients_lock = threading.Lock()
+        self.chat_history = []
+        self.chat_history_lock = threading.Lock()
+        signal.signal(signal.SIGINT, self.signal_handler)
+        signal.signal(signal.SIGALRM, self.alarm_handler)
+        signal.alarm(30)
 
     def signal_handler(self, sig, frame):
         print("\nClosing server...")
@@ -79,10 +83,15 @@ class ChatServer:
             client.join()
             self.remove_client(client)
         self.server.close()
+        self.backup_chat_history()
         print('[SERVER] Server closed.')
 
+    def alarm_handler(self, signum, frame):
+        # Backup chat history and reschedule the alarm
+        self.backup_chat_history()
+        signal.alarm(30)  # Reschedule the alarm
+
     def start(self):
-        signal.signal(signal.SIGINT, self.signal_handler)
         print(f"[SERVER] Server started on {self.server.getsockname()}")
         while self.running:
             try:
@@ -122,11 +131,24 @@ class ChatServer:
         print(f'[SERVER] Client {client.name} {client.address} disconnected.')
     
     def broadcast(self, message, sender="[SERVER]"):
+        full_message = f"{sender}: {message}\n"
+        with self.chat_history_lock:
+            self.chat_history.append(full_message)
         with self.clients_lock:
             clients_copy = self.clients.copy()
         for client in clients_copy:
             if sender != client.name:
                 client.send_message(f"{sender}: {message}\n")
+
+    def backup_chat_history(self):
+        with self.chat_history_lock:
+            history_copy = self.chat_history.copy()
+        try:
+            with open('chat_history.txt', 'w') as f:
+                f.writelines(history_copy)
+            print("[SERVER] Chat history backed up.")
+        except Exception as e:
+            print(f"[SERVER] Error backing up chat history: {e}")
 
 if __name__ == '__main__':
     HOST = '127.0.0.1'
