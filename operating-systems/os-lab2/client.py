@@ -51,7 +51,7 @@ class ChatClient:
                 print(f"\nError receiving message: {e}")
                 self.connection_alive = False
                 break
-        print("Client receive thread ended.")
+        # print("Client receive thread ended.")
         os.kill(os.getpid(), signal.SIGINT)
 
     def send_messages(self):
