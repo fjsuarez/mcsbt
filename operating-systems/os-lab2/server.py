@@ -24,7 +24,7 @@ class ChatClient(threading.Thread):
                 else:
                     self.conn.sendall(f"Current chat members: {', '.join([client.name for client in self.server.clients])}\n".encode('utf-8'))
                 self.server.clients.append(self)
-            self.conn.settimeout(1)
+            # self.conn.settimeout(1)
             while self.connection_alive:
                 try:
                     message = self.conn.recv(1024).decode('utf-8')
@@ -33,9 +33,9 @@ class ChatClient(threading.Thread):
                     else:
                         self.connection_alive = False
                         break
-                except socket.timeout:
+                # except socket.timeout:
                     # print(f"Checking if thread {self.name} running...")
-                    continue
+                    # continue
                 except Exception as e:
                     if self.server.running:
                         print(f"\nError receiving message: {e}")
@@ -51,7 +51,8 @@ class ChatClient(threading.Thread):
 
     def send_message(self, message):
         try:
-            self.conn.sendall(message.encode('utf-8'))
+            if self.server.running and self.connection_alive:
+                self.conn.sendall(message.encode('utf-8'))
         except Exception as e:
             print(f"Error sending message to {self.name}: {e}")
             self.connection_alive = False
@@ -72,6 +73,8 @@ class ChatServer:
             clients_copy = self.clients.copy()
         for client in clients_copy:
             client.connection_alive = False
+            client.conn.shutdown(socket.SHUT_RDWR)
+            client.conn.close()
         for client in clients_copy:
             client.join()
             self.remove_client(client)
@@ -109,7 +112,8 @@ class ChatServer:
                     client.conn.shutdown(socket.SHUT_RDWR)
                     client.conn.close()
                 except Exception as e:
-                    print(f"Exception when closing connection: {e}")
+                    # print(f"Exception when closing connection: {e}")
+                    pass
                 self.clients.remove(client)
             else:
                 print(f'[SERVER] Client {client.address} already removed.')
