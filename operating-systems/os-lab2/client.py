@@ -29,7 +29,7 @@ class ChatClient:
 
     def receive_messages(self):
         """Handles receiving messages from the server."""
-        buffer = ''                                                             # Buffer to store messages until a newline is received                                
+        buffer = ''                                                             # Buffer to store messages until a newline is received
         while self.connection_alive:
             try:
                 data = self.client_socket.recv(1024).decode('utf-8')
@@ -38,7 +38,7 @@ class ChatClient:
                     while '\n' in buffer:
                         message, buffer = buffer.split('\n', 1)                 # Split the buffer by newline
                         print(f'{message.strip()}', flush=True)                 # Print the message and flush the buffer
-                else:                                                           # If no data is received, the server has closed the connection  
+                else:                                                           # If no data is received, the server has closed the connection
                     print("\nConnection closed by the server.")
                     self.connection_alive = False
                     break
@@ -68,7 +68,7 @@ class ChatClient:
             self.client_socket.close()
         except Exception as e:
             print(f"\nError closing socket: {e}")
-        sys.exit(0)                                                         # Exit the program with status code 0                                          # Print a message if the program exits
+        sys.exit(0)                                                         # Exit the program with status code 0
 
 if __name__ == "__main__":
     if len(sys.argv) > 1:                                                       # Check if a username was provided
