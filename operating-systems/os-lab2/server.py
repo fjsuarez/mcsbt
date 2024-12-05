@@ -15,14 +15,15 @@ class ChatClient(threading.Thread):
         try:
             self.name = self.conn.recv(1024).decode('utf-8')
             print(f"[SERVER] New client connected: {self.name} from {self.address}")
-            self.server.broadcast(f"{self.name} has joined the chat.")
-            self.conn.sendall(f"Welcome to the chat server, {self.name}!\n".encode('utf-8'))
-            with self.server.clients_semaphore:                                          
-                if not self.server.clients:
-                    self.conn.sendall("You are the first user in the chat.\n".encode('utf-8'))
-                else:
-                    self.conn.sendall(f"Current chat members: {', '.join([client.name for client in self.server.clients])}\n".encode('utf-8'))
-                self.server.clients.append(self)
+            self.server.broadcast(f"{self.name} has joined the chat.")                          # Broadcast the new client's arrival
+            self.conn.sendall(f"Welcome to the chat server, {self.name}!\n".encode('utf-8'))    # Send a welcome message to the new client
+            self.server.clients_semaphore.acquire()                                             # Client list critical region
+            if not self.server.clients:                                                         # Send custom message if the client is the first one
+                self.conn.sendall("You are the first user in the chat.\n".encode('utf-8'))      
+            else:
+                self.conn.sendall(f"Current chat members: {', '.join([client.name for client in self.server.clients])}\n".encode('utf-8'))
+            self.server.clients.append(self)                                                    # Only after sending messages, add the client to the list                             
+            self.server.clients_semaphore.release()
             while self.connection_alive:
                 try:
                     message = self.conn.recv(1024).decode('utf-8')
@@ -57,17 +58,17 @@ class ChatServer:
         self.server.bind((host, port))
         self.server.listen(5)
         self.running = True
-        self.clients_semaphore = threading.Semaphore(1)
+        self.clients_semaphore = threading.Semaphore(1)                                 # Semaphore to protect the clients list
         self.chat_history = []
-        self.chat_history_semaphore = threading.Semaphore(1)
-        signal.signal(signal.SIGINT, self.signal_handler)
-        signal.signal(signal.SIGALRM, self.alarm_handler)
+        self.chat_history_semaphore = threading.Semaphore(1)                            # Semaphore to protect the chat history
+        signal.signal(signal.SIGINT, self.signal_handler)                               # Set up SIGINT handling
+        signal.signal(signal.SIGALRM, self.alarm_handler)                               # Set up SIGALRM handling
         signal.alarm(30)
 
     def signal_handler(self, sig, frame):
         print("\nClosing server...")
         self.running = False
-        self.clients_semaphore.acquire()
+        self.clients_semaphore.acquire()                                                # Client list critical region
         clients_copy = self.clients.copy()
         self.clients_semaphore.release()
         for client in clients_copy:

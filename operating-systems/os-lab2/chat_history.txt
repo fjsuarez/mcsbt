@@ -1,16 +1,16 @@
-[SERVER]: user3 has joined the chat.
+[SERVER]: user2 has joined the chat.
 [SERVER]: user1 has joined the chat.
 user1: asdf
 user1: asdf
+[SERVER]: user1 has left the chat.
+[SERVER]: user1 has joined the chat.
+[SERVER]: user1 has left the chat.
+[SERVER]: user1 has joined the chat.
 [SERVER]: user1 has left the chat.
 [SERVER]: user1 has joined the chat.
 user1: sadf
 user1: asdf
 [SERVER]: user1 has left the chat.
 [SERVER]: user1 has joined the chat.
-user1: asdf
-[SERVER]: user3 has left the chat.
-[SERVER]: user3 has joined the chat.
-user3: asdf
+[SERVER]: user2 has left the chat.
 [SERVER]: user1 has left the chat.
-[SERVER]: user3 has left the chat.
