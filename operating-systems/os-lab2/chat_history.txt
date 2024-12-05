@@ -1,0 +1,9 @@
+[SERVER]: user2 has joined the chat.
+[SERVER]: user3 has joined the chat.
+[SERVER]: user1 has joined the chat.
+user1: asdf
+user1: asdf
+user1: asdf
+[SERVER]: user1 has joined the chat.
+[SERVER]: user1 has joined the chat.
+[SERVER]: user1 has joined the chat.

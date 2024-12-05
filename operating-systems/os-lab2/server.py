@@ -17,13 +17,12 @@ class ChatClient(threading.Thread):
             print(f"[SERVER] New client connected: {self.name} from {self.address}")
             self.server.broadcast(f"{self.name} has joined the chat.")
             self.conn.sendall(f"Welcome to the chat server, {self.name}!\n".encode('utf-8'))
-            with self.server.clients_lock:
+            with self.server.clients_lock:                                          
                 if not self.server.clients:
                     self.conn.sendall("You are the first user in the chat.\n".encode('utf-8'))
                 else:
                     self.conn.sendall(f"Current chat members: {', '.join([client.name for client in self.server.clients])}\n".encode('utf-8'))
                 self.server.clients.append(self)
-            # self.conn.settimeout(1)
             while self.connection_alive:
                 try:
                     message = self.conn.recv(1024).decode('utf-8')
@@ -32,9 +31,6 @@ class ChatClient(threading.Thread):
                     else:
                         self.connection_alive = False
                         break
-                # except socket.timeout:
-                    # print(f"Checking if thread {self.name} running...")
-                    # continue
                 except Exception as e:
                     if self.server.running:
                         print(f"\nError receiving message: {e}")
@@ -45,16 +41,14 @@ class ChatClient(threading.Thread):
         finally:
             if self.server.running:
                 self.server.remove_client(self)
-        # else:
-            # print(f"Thread {self.name} execution ended.")
 
-    def send_message(self, message):
+    def send_message(self, message):                                        
         try:
-            if self.server.running and self.connection_alive:
+            if self.server.running and self.connection_alive:                           # Check if the server is running and the connection is alive
                 self.conn.sendall(message.encode('utf-8'))
         except Exception as e:
             print(f"Error sending message to {self.name}: {e}")
-            self.connection_alive = False
+            self.connection_alive = False                                               # If something goes wrong, close the connection
 
 class ChatServer:
     def __init__(self, host, port):
@@ -87,25 +81,20 @@ class ChatServer:
         print('[SERVER] Server closed.')
 
     def alarm_handler(self, signum, frame):
-        # Backup chat history and reschedule the alarm
-        self.backup_chat_history()
-        signal.alarm(30)  # Reschedule the alarm
+        self.backup_chat_history()                                          # Backup chat history
+        signal.alarm(30)                                                    # Reschedule the alarm
 
     def start(self):
         print(f"[SERVER] Server started on {self.server.getsockname()}")
         while self.running:
             try:
-                # self.server.settimeout(1)
                 conn, address = self.server.accept()
                 self.add_client(conn, address, self)
             except OSError:
                 if not self.running:
-                    break # Server is closing
+                    break                                                   # Server is closing
                 else:
                     print("Error accepting connection.")
-            # except socket.timeout:
-                # print(f"{self.running} Checking if running... active users: {threading.active_count() - 1}")
-                # continue
 
     def add_client(self, client, address, server):
         new_client = ChatClient(client, address, server)
@@ -115,13 +104,11 @@ class ChatServer:
     def remove_client(self, client):
         with self.clients_lock:
             if client in self.clients:
-                # print(f'[SERVER] Removing client {client.name} from {client.address}...')
                 client.connection_alive = False
                 try:
                     client.conn.shutdown(socket.SHUT_RDWR)
                     client.conn.close()
                 except Exception as e:
-                    # print(f"Exception when closing connection: {e}")
                     pass
                 self.clients.remove(client)
             else:
