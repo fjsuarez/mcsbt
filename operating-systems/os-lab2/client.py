@@ -4,9 +4,6 @@ import sys
 import signal
 import os
 
-HOST = "127.0.0.1"
-PORT = 65432
-
 class ChatClient:
     def __init__(self, host, port, username):
         self.host = host
@@ -37,14 +34,12 @@ class ChatClient:
                     buffer += data
                     while '\n' in buffer:
                         message, buffer = buffer.split('\n', 1)                 # Split the buffer by newline
-                        print(f'{message.strip()}', flush=True)                 # Print the message and flush the buffer
-                else:                                                           # If no data is received, the server has closed the connection
-                    print("\nConnection closed by the server.")
-                    self.connection_alive = False
+                        print(f'{message.strip()}')                             # Print the message without leading/trailing whitespace
+                else:                                                           # If no data is received, the socket has been closed
+                    print("\nSocket closed.")
                     break
             except Exception as e:
                 print(f"\nError receiving message: {e}")
-                self.connection_alive = False
                 break
         os.kill(os.getpid(), signal.SIGINT)                                     # Send SIGINT to the process if the connection is closed
 
@@ -57,23 +52,24 @@ class ChatClient:
                     self.client_socket.sendall(message.encode('utf-8'))
             except Exception as e:
                 print(f"\nError sending message: {e}")
-                self.connection_alive = False
                 break
         os.kill(os.getpid(), signal.SIGINT)                                     # Send SIGINT to the process if the connection is closed
 
     def signal_handler(self, sig, frame):
-        print("\nShutting down client...")
-        self.connection_alive = False
-        try:
-            self.client_socket.shutdown(socket.SHUT_RDWR)
-            self.client_socket.close()
-            self.receive_thread.join()
-        except Exception as e:
-            print(f"\nError closing socket: {e}")
-        os.kill(os.getpid(), signal.SIGKILL)    
-
+        if self.connection_alive:
+            print("\nShutting down client...")
+            self.connection_alive = False
+            try:
+                self.client_socket.shutdown(socket.SHUT_RDWR)                   # Shutdown the socket. Will cause the receive thread to exit
+                print("\nClient closed.")
+            except Exception as e:
+                print(f"\nError closing socket: {e}")
+        os.kill(os.getpid(), signal.SIGKILL)                                    # Kill the process if it doesn't exit cleanly.
+                                                                                # This is a last resort as we are not allowed to used daemon threads.
 if __name__ == "__main__":
     if len(sys.argv) > 1:                                                       # Check if a username was provided
+        HOST = "127.0.0.1"
+        PORT = 65432
         username = sys.argv[1]
         client = ChatClient(HOST, PORT, username)                               # Create a new ChatClient instance
         client.start()                                                          # Start the client

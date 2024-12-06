@@ -16,12 +16,13 @@ class ChatClient(threading.Thread):
             self.name = self.conn.recv(1024).decode('utf-8')
             print(f"[SERVER] New client connected: {self.name} from {self.address}")
             self.server.broadcast(f"{self.name} has joined the chat.")                          # Broadcast the new client's arrival
-            self.conn.sendall(f"Welcome to the chat server, {self.name}!\n".encode('utf-8'))    # Send a welcome message to the new client
+            self.send_message(f"Welcome to the chat server, {self.name}!\n")                    # Send a welcome message to the new client
             self.server.clients_semaphore.acquire()                                             # Client list critical region
             if not self.server.clients:                                                         # Send custom message if the client is the first one
-                self.conn.sendall("You are the first user in the chat.\n".encode('utf-8'))      
+                self.send_message("You are the first user in the chat.\n")      
             else:
-                self.conn.sendall(f"Current chat members: {', '.join([client.name for client in self.server.clients])}\n".encode('utf-8'))
+                current_members = ', '.join([client.name for client in self.server.clients])
+                self.send_message(f"Current chat members: {current_members}\n")
             self.server.clients.append(self)                                                    # Only after sending messages, add the client to the list                             
             self.server.clients_semaphore.release()
             while self.connection_alive:
@@ -40,16 +41,16 @@ class ChatClient(threading.Thread):
         except Exception as e:
             print(f"Error in client thread: {e}")
         finally:
-            if self.server.running:                                             # If the server is still running, remove the client
-                self.server.remove_client(self)
+            if self.server.running:                                             # If server is shutting down, avoid removing twice
+                self.server.remove_client(self)                                 # If server is still running, remove client
 
     def send_message(self, message):                                        
         try:
-            if self.server.running and self.connection_alive:                   # Check if the server is running and the connection is alive
+            if self.server.running and self.connection_alive:                   # Check if server is running and connection is alive
                 self.conn.sendall(message.encode('utf-8'))
         except Exception as e:
             print(f"Error sending message to {self.name}: {e}")
-            self.connection_alive = False                                       # If something goes wrong, close the connection
+            self.connection_alive = False                                       # If something goes wrong, close connection
 
 class ChatServer:
     def __init__(self, host, port):
@@ -58,9 +59,9 @@ class ChatServer:
         self.server.bind((host, port))
         self.server.listen(5)
         self.running = True
-        self.clients_semaphore = threading.Semaphore(1)                         # Semaphore to protect the clients list
+        self.clients_semaphore = threading.Semaphore(1)                         # Semaphore to protect clients list
         self.chat_history = []
-        self.chat_history_semaphore = threading.Semaphore(1)                    # Semaphore to protect the chat history
+        self.chat_history_semaphore = threading.Semaphore(1)                    # Semaphore to protect chat history
         signal.signal(signal.SIGINT, self.signal_handler)                       # Set up SIGINT handling
         signal.signal(signal.SIGALRM, self.alarm_handler)                       # Set up SIGALRM handling
         signal.alarm(30)
@@ -72,13 +73,8 @@ class ChatServer:
         clients_copy = self.clients.copy()
         self.clients_semaphore.release()
         for client in clients_copy:
-            client.connection_alive = False
-            client.conn.shutdown(socket.SHUT_RDWR)                              # Shutdown the sockets
-            client.conn.close()                                                 # Close the sockets
-        for client in clients_copy:
-            client.join()                                                       # Wait for the threads to finish                       
-            self.remove_client(client)                                          # Remove the clients from the list
-        self.server.close()                                                     # Close the server socket
+            self.remove_client(client)                                          # Remove all clients
+        self.server.close()                                                     # Close server socket
         self.backup_chat_history()                                              # Backup chat history before shutting down
         print('[SERVER] Server closed.')
 
@@ -105,19 +101,20 @@ class ChatServer:
     
     def remove_client(self, client):
         self.clients_semaphore.acquire()                                        # Client list critical region
-        if client in self.clients:                                              # Check if the client is in the list
-            client.connection_alive = False                                     # Set the connection status to False to let client thread end gracefully
+        if client in self.clients:                                              # Check if client is in the list
+            client.connection_alive = False                                     # Set connection status to False to let client thread end gracefully
             try:
-                client.conn.shutdown(socket.SHUT_RDWR)                          # Shutdown the socket
-                client.conn.close()                                             # Close the socket
+                client.conn.shutdown(socket.SHUT_RDWR)                          # Shutdown socket
+                client.conn.close()                                             # Close socket
+                client.join()                                                   # Wait for client thread to finish
             except Exception as e:
                 pass
-            self.clients.remove(client)                                         # Remove the client from the list
+            self.clients.remove(client)                                         # Remove the client from  list
         else:
             print(f'[SERVER] Client {client.address} already removed.')
         self.clients_semaphore.release()
         
-        self.broadcast(f"{client.name} has left the chat.")                     # Broadcast the client's departure
+        self.broadcast(f"{client.name} has left the chat.")                     # Broadcast client's departure
         print(f'[SERVER] Client {client.name} {client.address} disconnected.')
     
     def broadcast(self, message, sender="[SERVER]"):
@@ -128,7 +125,7 @@ class ChatServer:
         self.clients_semaphore.acquire()                                        # Client list critical region
         clients_copy = self.clients.copy()
         self.clients_semaphore.release()
-        for client in clients_copy:                                             # Send the message to all clients
+        for client in clients_copy:                                             # Send message to all clients
             if sender != client.name:
                 client.send_message(f"{sender}: {message}\n")
 
@@ -137,7 +134,7 @@ class ChatServer:
         history_copy = self.chat_history.copy()
         self.chat_history_semaphore.release()
         try:
-            with open('chat_history.txt', 'w') as f:                        # Write the chat history to a file
+            with open('chat_history.txt', 'w') as f:                        # Write chat history to a file
                 f.writelines(history_copy)
             print("[SERVER] Chat history backed up.")
         except Exception as e:
