@@ -23,7 +23,7 @@ class ChatClient:
             print(f"No server found at the specified address: {e}")
             sys.exit(1)
         self.client_socket.sendall(self.username.encode('utf-8'))               # Send the username as the first message
-        self.receive_thread = threading.Thread(target=self.receive_messages, daemon=True)    # Start the receive thread
+        self.receive_thread = threading.Thread(target=self.receive_messages)    # Start the receive thread
         self.receive_thread.start()
         self.send_messages()                                                    # Start the input loop
 
@@ -65,10 +65,12 @@ class ChatClient:
         print("\nShutting down client...")
         self.connection_alive = False
         try:
+            self.client_socket.shutdown(socket.SHUT_RDWR)
             self.client_socket.close()
+            self.receive_thread.join()
         except Exception as e:
             print(f"\nError closing socket: {e}")
-        sys.exit(0)                                                         # Exit the program with status code 0
+        os.kill(os.getpid(), signal.SIGKILL)    
 
 if __name__ == "__main__":
     if len(sys.argv) > 1:                                                       # Check if a username was provided
