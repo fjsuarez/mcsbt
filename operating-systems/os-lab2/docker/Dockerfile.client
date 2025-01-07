@@ -1,0 +1,12 @@
+# docker/Dockerfile.client
+FROM python:3.9-slim
+
+# Create a working directory
+WORKDIR /app
+
+# Copy the client script into the container
+COPY client.py /app/
+
+# By default, we’ll just keep the container alive with a shell.
+# We'll override this CMD at runtime (see below).
+CMD ["/bin/bash"]

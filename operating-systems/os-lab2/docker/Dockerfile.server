@@ -1,0 +1,14 @@
+# docker/Dockerfile.server
+FROM python:3.9-slim
+
+# Create a working directory
+WORKDIR /app
+
+# Copy the server script into the container
+COPY server.py /app/
+
+# Expose the port on which your server listens (e.g., 5000)
+EXPOSE 65432
+
+# Run the server
+CMD ["python", "server.py"]
